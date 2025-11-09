@@ -58,6 +58,12 @@ document.getElementById('whiteNoiseToggle').addEventListener('change', (e) => {
   chrome.storage.sync.set({ audioEnabled: audioActive });
 });
 
+// Text-to-speech toggle change handler
+document.getElementById('ttsToggle').addEventListener('change', (e) => {
+  const ttsEnabled = e.target.checked;
+  chrome.storage.sync.set({ ttsEnabled });
+});
+
 // Sound type selector change handler
 document.getElementById('soundType').addEventListener('change', (e) => {
   currentSoundType = e.target.value;
@@ -203,9 +209,11 @@ document.getElementById('rocketBtn').addEventListener('click', () => {
 });
 
 // Load settings from storage
-chrome.storage.sync.get(['enabled', 'autoPause'], (data) => {
+chrome.storage.sync.get(['enabled', 'autoPause', 'ttsEnabled'], (data) => {
   // Set toggle state for enable protection
   document.getElementById('enableToggle').checked = data.enabled !== false;
+
+  document.getElementById('ttsToggle').checked = data.ttsEnabled !== false;
 
   // Auto-pause is always enabled (no toggle in UI)
 
@@ -292,6 +300,10 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 // Reset statistics button
 document.getElementById('resetStats').addEventListener('click', () => {
+
+  chrome.storage.local.clear();
+  chrome.storage.sync.clear();
+  
   const resetStats = {
     videosMonitored: 0,
     warningsIssued: 0,

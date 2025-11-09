@@ -25,7 +25,7 @@ class FlashDetector {
 
     // Detection parameters (WCAG 2.1 compliant)
     this.LUMINANCE_THRESHOLD = 0.2; // 10% relative luminance change
-    this.RED_THRESHOLD = 0.8; // Saturated red detection
+    this.RED_THRESHOLD = 0.6; // Saturated red detection
     this.FLASH_FREQUENCY = 3; // 3 flashes per second
     this.DETECTION_WINDOW = 1000; // 1 second in milliseconds
     this.MIN_BRIGHTNESS = 0.05; // Ignore very dark frames (< 5% brightness)
@@ -230,6 +230,8 @@ class FlashDetector {
    * Trigger warning overlay
    */
   triggerWarning(type, flashCount) {
+    // Report warning to popup - wrap in try-catch for extension context errors
+    console.log('[Halo] Sending warningIssued message to background');
     if (this.warningShown) return;
 
     this.warningShown = true;
@@ -237,8 +239,9 @@ class FlashDetector {
     // Pause video immediately
     this.video.pause();
 
-    // Report warning to popup - wrap in try-catch for extension context errors
-    console.log('[Halo] Sending warningIssued message to background');
+    speakWarning(flashCount);
+
+    
     try {
       chrome.runtime.sendMessage({
         action: 'updateStats',
@@ -354,6 +357,45 @@ class FlashDetector {
   }
 }
 
+function speakWarning(flashCount) {
+
+  chrome.storage.sync.get(['ttsEnabled'], (data) => {
+
+    if (data.ttsEnabled === false) {
+      return;
+    }
+
+  // Check if speech synthesis is supported
+  if (!window.speechSynthesis) {
+    console.log('[Flash Guardian] Speech synthesis not supported');
+    return;
+  }
+
+  // Create utterance with warning message
+  const message = `Warning! Detected ${flashCount} flashes per second. This content may be unsafe for photosensitive viewers.`;
+  const utterance = new SpeechSynthesisUtterance(message);
+  
+  // Configure voice settings
+  utterance.rate = 1.0;  // Normal speed
+  utterance.pitch = 1.0; // Normal pitch
+  utterance.volume = 0.8; // Slightly quieter than max
+  
+  // Try to use a neutral female voice if available
+  const voices = speechSynthesis.getVoices();
+  const preferredVoice = voices.find(voice => 
+    voice.name.includes('Female') || 
+    voice.name.includes('Samantha') || 
+    voice.name.includes('Google')
+  );
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+  }
+
+  // Speak the warning
+  speechSynthesis.speak(utterance);
+  });
+}
+
 // Main execution
 (function() {
   console.log('[Halo] Content script loaded');
@@ -372,7 +414,11 @@ class FlashDetector {
         console.log('[Halo] Protection enabled:', protectionEnabled);
         resolve();
       });
-    }),
+    }).catch(error => {
+    console.error('[Flash Guardian] Error loading settings:', error);
+    protectionEnabled = true; // Default to enabled on error
+    resolve();
+  }),
     new Promise(resolve => {
       chrome.storage.local.get(['visitedVideos'], (data) => {
         if (data.visitedVideos && Array.isArray(data.visitedVideos)) {
@@ -393,26 +439,26 @@ class FlashDetector {
    * Get video identifier from URL (for YouTube)
    */
   function getVideoId() {
-    // Check if we're on a Shorts page
-    if (window.location.pathname.includes('/shorts/')) {
-      // Extract the shorts ID from the URL path
-      const shortsMatch = window.location.pathname.match(/\/shorts\/([^/?]+)/);
-      if (shortsMatch && shortsMatch[1]) {
-        return shortsMatch[1];
+    // Check if we're on YouTube
+    if (window.location.hostname.includes('youtube.com')) {
+      // Check for Shorts first
+      if (window.location.pathname.includes('/shorts/')) {
+        const shortsMatch = window.location.pathname.match(/\/shorts\/([^/?]+)/);
+        return shortsMatch?.[1] || null;
+      }
+      
+      // Regular YouTube videos
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoId = urlParams.get('v');
+      
+      // Return video ID for both watch pages and embedded players
+      if (videoId) {
+        return videoId;
       }
     }
-
-    // For regular YouTube videos, extract video ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const videoId = urlParams.get('v');
-
-    // Return video ID for watch pages
-    if (videoId && window.location.pathname.includes('/watch')) {
-      return videoId;
-    }
-
-    // Return null for non-watch/non-shorts pages
-    return null;
+    
+    // For non-YouTube videos, use the src as an ID
+    return 'video-' + Math.random().toString(36).substr(2, 9);
   }
 
   /**
@@ -428,6 +474,7 @@ class FlashDetector {
     // CRITICAL: Don't initialize until storage is loaded
     if (!storageLoaded) {
       console.log('[Halo] Storage not loaded yet, deferring initialization');
+      setTimeout(() => initializeDetector(video), 100);
       return;
     }
 
@@ -438,10 +485,10 @@ class FlashDetector {
     const videoId = getVideoId();
 
     // Don't process videos on non-watch/non-shorts pages (homepage, search, etc.)
-    if (!videoId) {
-      console.log('[Halo] Not on a watch or shorts page, skipping video initialization');
-      return;
-    }
+    // if (!videoId) {
+    //   console.log('[Halo] Not on a watch or shorts page, skipping video initialization');
+    //   return;
+    // }
 
     // If no source yet, wait for it
     if (!currentSrc) {
