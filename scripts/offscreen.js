@@ -1,0 +1,63 @@
+/**
+ * Halo Offscreen Document
+ * Handles audio playback for the extension
+ */
+
+let audioElement = null;
+
+// Listen for messages from the background script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('[Halo Offscreen] Received message:', request);
+
+  if (request.action === 'startAudio') {
+    const soundFile = request.soundFile;
+    try {
+      // Stop any existing audio
+      if (audioElement) {
+        audioElement.pause();
+        audioElement = null;
+      }
+
+      // Create and play audio
+      audioElement = new Audio(chrome.runtime.getURL(soundFile));
+      audioElement.loop = true;
+      audioElement.volume = 0.3;
+
+      audioElement.play().then(() => {
+        console.log('[Halo Offscreen] Audio started:', soundFile);
+        sendResponse({ success: true });
+      }).catch((error) => {
+        console.error('[Halo Offscreen] Error playing audio:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    } catch (error) {
+      console.error('[Halo Offscreen] Error creating audio:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  }
+
+  if (request.action === 'stopAudio') {
+    try {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        audioElement = null;
+        console.log('[Halo Offscreen] Audio stopped');
+      }
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('[Halo Offscreen] Error stopping audio:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  }
+
+  if (request.action === 'getAudioState') {
+    const playing = audioElement !== null && !audioElement.paused;
+    sendResponse({ playing: playing });
+    return true;
+  }
+});
+
+console.log('[Halo Offscreen] Audio player initialized');

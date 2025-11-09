@@ -6,6 +6,28 @@
 // Queue to serialize stat updates and prevent race conditions
 let updateQueue = Promise.resolve();
 
+// Offscreen document state
+let offscreenDocumentCreated = false;
+
+// Create offscreen document for audio playback
+async function createOffscreenDocument() {
+  if (offscreenDocumentCreated) {
+    return;
+  }
+
+  try {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: ['AUDIO_PLAYBACK'],
+      justification: 'Play background meditation music'
+    });
+    offscreenDocumentCreated = true;
+    console.log('[Halo Background] Offscreen document created');
+  } catch (error) {
+    console.error('[Halo Background] Error creating offscreen document:', error);
+  }
+}
+
 // Track active tabs for each platform
 let platformTabs = {
   youtube: new Set(),
@@ -54,9 +76,24 @@ function resetStats() {
   });
 }
 
-// Listen for messages from content scripts
+// Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('[Halo Background] Received message:', request);
+
+  // Handle audio control messages - forward to offscreen document
+  if (request.action === 'startAudio' || request.action === 'stopAudio' || request.action === 'getAudioState') {
+    // Create offscreen document if needed
+    createOffscreenDocument().then(() => {
+      // Forward the message to the offscreen document
+      chrome.runtime.sendMessage(request, (response) => {
+        sendResponse(response);
+      });
+    }).catch((error) => {
+      console.error('[Halo Background] Error with offscreen document:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // Keep message channel open for async response
+  }
 
   if (request.action === 'updateStats') {
     // Serialize updates using a queue to prevent race conditions
@@ -124,6 +161,8 @@ chrome.runtime.onInstalled.addListener((details) => {
     const defaultSettings = {
       enabled: true,
       autoPause: true,
+      audioEnabled: false, // Audio OFF by default
+      soundType: 'meditation',
       stats: {
         videosMonitored: 0,
         warningsIssued: 0,

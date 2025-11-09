@@ -412,13 +412,13 @@
     }
 
     #autoGenerateBtn:hover {
-      background: #2a2a2a !important;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+      background: linear-gradient(135deg, #a8e500 0%, #00c4ef 100%) !important;
+      box-shadow: 0 6px 16px rgba(184, 245, 10, 0.4) !important;
     }
 
     #autoGenerateBtn:active {
-      background: #0a0a0a !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+      background: linear-gradient(135deg, #98d500 0%, #00b4df 100%) !important;
+      box-shadow: 0 2px 8px rgba(184, 245, 10, 0.3) !important;
     }
 
     #autoGenerateBtn:disabled {
@@ -494,15 +494,21 @@
     <div class="header-content">
       <div class="title-section">
         <img src="icons/logo.png" alt="Halo" style="height: 80px; margin-bottom: -8px; margin-left: 0; display: block;">
-        <p id="headerSubtitle">Photosensitive Content Protection</p>
+        <p id="headerSubtitle" style="white-space: nowrap;">Photosensitive Content Protection</p>
       </div>
       <div class="header-icons">
+        <button id="musicBtn" class="icon-btn" title="White Noise" style="display: none;">
+          <img src="icons/musical-note.png" alt="Music" class="icon-img">
+        </button>
         <button id="settingsBtn" class="icon-btn" title="Settings" style="display: none;">
           <img src="icons/setting.png" alt="Settings" class="icon-img">
         </button>
-        <button id="viewToggle" class="icon-btn" title="Toggle View">
-          <img src="icons/notepad.png" alt="Notepad" class="icon-img">
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="viewToggleHint" style="font-size: 12px; color: #666; font-weight: 500;">Summarizer →</span>
+          <button id="viewToggle" class="icon-btn" title="Switch to Summarizer">
+            <img src="icons/notepad.png" alt="Notepad" class="icon-img">
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -564,8 +570,8 @@
     <div class="summarizer-content">
       <textarea id="textInput" placeholder="Paste article text here..." style="width: 100%; min-height: 150px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; resize: vertical; box-sizing: border-box; margin-bottom: 10px; outline: none;"></textarea>
 
-      <button id="autoGenerateBtn" style="width: 100%; background: #1a1a1a; color: #ffffff; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); margin-bottom: 15px;">
-        Auto-Generate from Page
+      <button id="autoGenerateBtn" style="width: 100%; background: linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%); color: #1a1a1a; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(184, 245, 10, 0.3); margin-bottom: 15px; transition: all 0.3s ease;">
+        Auto-Fill from Page
       </button>
 
       <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
@@ -573,14 +579,17 @@
           <option value="quick">Quick Summary</option>
           <option value="bullets">Bullet Points</option>
         </select>
-        <button id="generateBtn" style="flex: 1; background: linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%); color: #1a1a1a; border: none; padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 4px 12px rgba(184, 245, 10, 0.3); transition: all 0.3s ease; outline: none;">
-          Generate
+        <button id="generateBtn" style="flex: 1; background: #1a1a1a; color: #ffffff; border: none; padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; outline: none;">
+          Summarize
         </button>
         <button id="clearBtn" style="flex: 0 0 auto; background: rgba(255, 255, 255, 0.9); color: #4a4a4a; border: 2px solid rgba(0, 0, 0, 0.1); padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); transition: all 0.3s ease;">
           Clear
         </button>
       </div>
 
+      <div id="summaryLoading" class="info" style="display: none; background: #e3f2fd; border-color: #42a5f5;">
+        <strong>⏳ Generating summary...</strong><br>
+        Processing your text with AI
       <div>
         <button id="openWebAppBtn" style="background: rgba(255, 255, 255, 0.9); color: #4a4a4a; border: 2px solid rgba(0, 0, 0, 0.1); padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); transition: all 0.3s ease;">
         Open
@@ -595,9 +604,25 @@
       <div id="summaryError" class="info" style="display: none; background: #ffebee; border-color: #ef5350; color: #c62828; white-space: pre-wrap;">
       </div>
 
-      <div id="summaryLoading" class="info" style="display: none; background: #e3f2fd; border-color: #42a5f5;">
-        <strong>⏳ Generating summary...</strong><br>
-        Processing your text with AI
+      <div id="summaryResult" class="stats" style="display: none; box-shadow: 0 0 20px rgba(184, 245, 10, 0.4), 0 0 40px rgba(0, 212, 255, 0.2); border: 2px solid rgba(184, 245, 10, 0.3);">
+        <h3 style="margin: 0 0 12px 0;">Summary</h3>
+        <div id="summaryText" style="font-size: 14px; line-height: 1.6; color: #000000; white-space: pre-wrap;"></div>
+      </div>
+
+      <div id="audioSection" class="setting-item" style="margin-bottom: 15px; display: none;">
+        <div class="setting-header">
+          <label>Enable White Noise</label>
+          <label class="toggle">
+            <input type="checkbox" id="whiteNoiseToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div style="margin-top: 10px;">
+          <select id="soundType" style="width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: #fff; cursor: pointer;">
+            <option value="meditation">Meditation Music</option>
+          </select>
+        </div>
+        <p style="margin-top: 8px;">Play calming background audio while reading</p>
       </div>
     </div>
   </div>
