@@ -175,15 +175,30 @@
     }
 
     .modal-footer .btn-cancel {
-      background: #fafafa;
+      background: #ffffff;
       color: #000000;
+      border: 2px solid #e0e0e0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+
+    .modal-footer .btn-cancel:hover {
+      background: #fafafa;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      border-color: #d0d0d0;
     }
 
     .modal-footer .btn-save {
-      background: #faee21;
-      color: #000000;
-      border-color: #faee21;
-      font-weight: 600;
+      background: linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%);
+      color: #1a1a1a;
+      border: none;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(184, 245, 10, 0.3);
+    }
+
+    .modal-footer .btn-save:hover {
+      background: linear-gradient(135deg, #a8e500 0%, #00c4ef 100%);
+      box-shadow: 0 4px 12px rgba(184, 245, 10, 0.4);
     }
 
     .modal-info {
@@ -395,6 +410,69 @@
     .footer a:hover {
       text-decoration: underline;
     }
+
+    #autoGenerateBtn:hover {
+      background: #2a2a2a !important;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    #autoGenerateBtn:active {
+      background: #0a0a0a !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    #autoGenerateBtn:disabled {
+      background: #bdbdbd !important;
+      cursor: not-allowed !important;
+      opacity: 0.6;
+    }
+
+    /* Global button styling - consistent shadows */
+    button {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Remove blue outline/glow from all buttons and inputs */
+    button:focus,
+    button:focus-visible,
+    textarea:focus,
+    textarea:focus-visible,
+    select:focus,
+    select:focus-visible,
+    input:focus,
+    input:focus-visible {
+      outline: none !important;
+    }
+
+    /* Preserve original shadows on buttons, just remove focus ring */
+    #generateBtn:focus,
+    #generateBtn:focus-visible {
+      box-shadow: 0 4px 12px rgba(184, 245, 10, 0.3) !important;
+    }
+
+    #clearBtn:focus,
+    #clearBtn:focus-visible {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    #autoGenerateBtn:focus,
+    #autoGenerateBtn:focus-visible {
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    #resetStats:focus,
+    #resetStats:focus-visible {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
   </style>
 </head>
 <body>
@@ -461,7 +539,7 @@
     </div>
 
     <div style="text-align: center; margin-top: 15px;">
-      <button id="resetStats" style="background: linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%); color: #1a1a1a; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(184, 245, 10, 0.3); transition: all 0.3s ease;">
+      <button id="resetStats" style="background: #1a1a1a; color: #ffffff; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);">
         Reset Statistics
       </button>
     </div>
@@ -470,14 +548,18 @@
   <!-- Text Summarizer View -->
   <div id="summarizerView" class="view-container">
     <div class="summarizer-content">
-      <textarea id="textInput" placeholder="Paste article text here..." style="width: 100%; min-height: 150px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; resize: vertical; box-sizing: border-box; margin-bottom: 15px;"></textarea>
+      <textarea id="textInput" placeholder="Paste article text here..." style="width: 100%; min-height: 150px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; resize: vertical; box-sizing: border-box; margin-bottom: 10px; outline: none;"></textarea>
+
+      <button id="autoGenerateBtn" style="width: 100%; background: #1a1a1a; color: #ffffff; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); margin-bottom: 15px;">
+        Auto-Generate from Page
+      </button>
 
       <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
         <select id="summaryType" style="flex: 1; padding: 14px 12px; padding-right: 36px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: #fff; cursor: pointer; height: 48px; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3e%3cpath fill=%27%23666%27 d=%27M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z%27/%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 12px center;">
           <option value="quick">Quick Summary</option>
           <option value="bullets">Bullet Points</option>
         </select>
-        <button id="generateBtn" style="flex: 1; background: linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%); color: #1a1a1a; border: none; padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 4px 12px rgba(184, 245, 10, 0.3); transition: all 0.3s ease;">
+        <button id="generateBtn" style="flex: 1; background: linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%); color: #1a1a1a; border: none; padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 4px 12px rgba(184, 245, 10, 0.3); transition: all 0.3s ease; outline: none;">
           Generate
         </button>
         <button id="clearBtn" style="flex: 0 0 auto; background: rgba(255, 255, 255, 0.9); color: #4a4a4a; border: 2px solid rgba(0, 0, 0, 0.1); padding: 14px 20px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 600; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); transition: all 0.3s ease;">
@@ -486,12 +568,7 @@
       </div>
 
       <div id="summaryResult" class="stats" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0;">Summary</h3>
-          <button id="copySummary" style="background: #fafafa; border: 1px solid #e0e0e0; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
-            Copy
-          </button>
-        </div>
+        <h3 style="margin: 0 0 12px 0;">Summary</h3>
         <div id="summaryText" style="font-size: 14px; line-height: 1.6; color: #000000; white-space: pre-wrap;"></div>
       </div>
 
@@ -508,7 +585,7 @@
   <!-- Settings Modal -->
   <div id="settingsModal" class="modal">
     <div class="modal-content">
-      <div class="modal-header">⚙️ Settings</div>
+      <div class="modal-header"><img src="icons/setting.png" alt="Settings" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 8px;">Settings</div>
       <div class="modal-body">
         <label for="aiProvider" style="display: block; margin-bottom: 8px;">AI Provider</label>
         <select id="aiProvider" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; margin-bottom: 15px;">
@@ -520,7 +597,7 @@
           <label for="apiKeyInput">Gemini API Key</label>
           <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
           <div class="modal-info">
-            Get your free API key at: <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>
+            Get your free API key at: <a href="https://aistudio.google.com/welcome" target="_blank">Google AI Studio</a>
           </div>
         </div>
 

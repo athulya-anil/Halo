@@ -7,6 +7,13 @@
  * - Red Flash: 3+ flashes per second with saturated red transitions
  */
 
+// Check if extension context is valid before running
+// Only throw if chrome is completely undefined, otherwise continue
+if (typeof chrome === 'undefined') {
+  console.log('[Halo] Chrome API not available');
+  throw new Error('Chrome API not available');
+}
+
 class FlashDetector {
   constructor(video, videoId, warnedVideosSet, getProtectionEnabled) {
     this.video = video;
@@ -665,15 +672,37 @@ class FlashDetector {
    * Create and show warning overlay
    */
   function showWarningOverlay(details) {
+    // Check if extension context is still valid
+    try {
+      if (!chrome.runtime?.id) {
+        console.log('[Halo] Extension context invalidated, stopping overlay creation');
+        return;
+      }
+    } catch (e) {
+      console.log('[Halo] Extension context invalidated');
+      return;
+    }
+
     // Check if overlay already exists
     let overlay = document.getElementById('halo-overlay');
 
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.id = 'halo-overlay';
+
+      let warningIconUrl;
+      try {
+        warningIconUrl = chrome.runtime.getURL('icons/warning.png');
+      } catch (e) {
+        console.log('[Halo] Cannot get icon URL, extension context invalidated');
+        return;
+      }
+
       overlay.innerHTML = `
         <div class="halo-content">
-          <div class="halo-icon">⚠️</div>
+          <div class="halo-icon">
+            <img src="${warningIconUrl}" alt="Warning">
+          </div>
           <h2>Photosensitive Warning</h2>
           <p class="halo-message">
             Rapid flashing content detected (<strong>${details.flashCount} flashes/second</strong>)

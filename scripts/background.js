@@ -188,12 +188,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (tabSet.has(tabId) && platform !== newPlatform) {
         tabSet.delete(tabId);
         console.log(`[Halo Background] Tab ${tabId} navigated away from ${platform}. Remaining tabs:`, tabSet.size);
-
-        // If no more tabs for this platform, reset stats
-        if (tabSet.size === 0) {
-          console.log(`[Halo Background] No more ${platform} tabs open. Resetting stats.`);
-          resetStats();
-        }
       }
     }
 
@@ -227,12 +221,6 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     if (tabSet.has(tabId)) {
       tabSet.delete(tabId);
       console.log(`[Halo Background] Tab ${tabId} removed from ${platform}. Remaining tabs:`, tabSet.size);
-
-      // If no more tabs for this platform, reset stats
-      if (tabSet.size === 0) {
-        console.log(`[Halo Background] No more ${platform} tabs open. Resetting stats.`);
-        resetStats();
-      }
     }
   }
 });

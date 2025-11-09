@@ -35,6 +35,11 @@ function switchToSummarizer() {
   document.getElementById('headerSubtitle').textContent = 'AI-Powered Text Summarizer';
   // Show settings button in summarizer view
   document.getElementById('settingsBtn').style.display = 'flex';
+  // Clear everything when switching to summarizer view
+  document.getElementById('textInput').value = '';
+  document.getElementById('summaryResult').style.display = 'none';
+  document.getElementById('summaryError').style.display = 'none';
+  document.getElementById('summaryLoading').style.display = 'none';
 }
 
 // Settings button - opens modal
@@ -159,13 +164,13 @@ document.getElementById('resetStats').addEventListener('click', () => {
       const button = document.getElementById('resetStats');
       const originalText = button.textContent;
       button.textContent = 'Statistics Reset!';
-      button.style.background = '#00d4ff';
+      button.style.background = 'linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%)';
       button.style.color = '#1a1a1a';
 
       setTimeout(() => {
         button.textContent = originalText;
-        button.style.background = 'linear-gradient(135deg, #b8f50a 0%, #00d4ff 100%)';
-        button.style.color = '#1a1a1a';
+        button.style.background = '#1a1a1a';
+        button.style.color = '#ffffff';
       }, 1500);
 
       console.log('[Halo] Statistics reset successfully');
@@ -183,6 +188,16 @@ document.getElementById('generateBtn').addEventListener('click', () => {
   generateSummary(type);
 });
 
+// Add Enter key support for textarea (Ctrl+Enter or Cmd+Enter to generate)
+document.getElementById('textInput').addEventListener('keydown', (e) => {
+  // Check for Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    const type = document.getElementById('summaryType').value;
+    generateSummary(type);
+  }
+});
+
 // Clear button
 document.getElementById('clearBtn').addEventListener('click', () => {
   document.getElementById('textInput').value = '';
@@ -191,13 +206,77 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   document.getElementById('summaryLoading').style.display = 'none';
 });
 
+// Auto-Generate button - extracts text from current page
+document.getElementById('autoGenerateBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('autoGenerateBtn');
+  const originalText = btn.textContent;
+
+  try {
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.textContent = '⏳ Extracting text...';
+
+    // Get active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    // First, ensure the content script is injected
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['scripts/summarizer.js']
+      });
+      // Wait a bit for the script to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (injectionError) {
+      // Script might already be injected, continue
+      console.log('[Halo] Content script may already be injected:', injectionError);
+    }
+
+    // Send message to content script to extract text
+    const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractText' });
+
+    if (response && response.text) {
+      const extractedText = response.text.trim();
+
+      if (extractedText.length < 100) {
+        showError('Could not find enough article text on this page. Try pasting the text manually.');
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+      }
+
+      // Fill the textarea
+      document.getElementById('textInput').value = extractedText;
+
+      // Show success feedback
+      btn.textContent = 'Text Extracted!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }, 2000);
+
+      // Focus on the textarea so user can see the content
+      document.getElementById('textInput').focus();
+
+    } else {
+      throw new Error('No text returned from page');
+    }
+
+  } catch (error) {
+    console.error('[Halo] Auto-generate error:', error);
+    showError('Could not extract text from this page. The page might not be supported, or you may need to refresh the page first.');
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
 // Generate summary function
 async function generateSummary(type) {
   const textInput = document.getElementById('textInput').value.trim();
 
   // Check if text is provided
   if (!textInput) {
-    showError('Please paste some text to summarize.');
+    showError('Please paste article text in the box above, or click "Auto-Generate from Page" to extract text from the current page.');
     return;
   }
 
@@ -229,17 +308,7 @@ async function generateSummary(type) {
   });
 }
 
-// Copy summary button
-document.getElementById('copySummary').addEventListener('click', () => {
-  const summaryText = document.getElementById('summaryText').textContent;
-  navigator.clipboard.writeText(summaryText).then(() => {
-    const btn = document.getElementById('copySummary');
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => {
-      btn.textContent = 'Copy';
-    }, 2000);
-  });
-});
+// Copy summary button - REMOVED (button no longer exists in UI)
 
 // AI Provider selector
 document.getElementById('aiProvider').addEventListener('change', (e) => {
