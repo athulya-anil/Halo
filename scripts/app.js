@@ -1,6 +1,5 @@
 /**
- * Flash Guardian Web App - AI Text Summarizer
- * Standalone version with local storage for settings
+ * Halo Web App
  */
 
 // ===================================
@@ -8,10 +7,9 @@
 // ===================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // loadSettings();
+
     setupEventListeners();
     updateCharCount();
-
     loadFromURLParams();
 });
 
@@ -82,6 +80,43 @@ function setupEventListeners() {
 // ===================================
 // MAIN FUNCTIONS
 // ===================================
+
+// ===================================
+// CLEAR AND COPY FUNCTIONS
+// ===================================
+
+
+function handleClear() {
+    document.getElementById('textInput').value = '';
+    document.getElementById('summaryResult').style.display = 'none';
+    document.getElementById('summaryError').style.display = 'none';
+    document.getElementById('summaryLoading').style.display = 'none';
+    document.getElementById('audioPlayer').style.display = 'none';
+    if (currentAudioUrl) {
+        URL.revokeObjectURL(currentAudioUrl);
+        currentAudioUrl = null;
+    }
+    updateCharCount();
+}
+
+function handleCopy() {
+    const summaryText = document.getElementById('summaryText').textContent;
+    navigator.clipboard.writeText(summaryText).then(() => {
+        const btn = document.getElementById('copySummary');
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        btn.style.background = '#4caf50';
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+        }, 2000);
+    });
+}
+
+function updateCharCount() {
+    const text = document.getElementById('textInput').value;
+    document.getElementById('charCount').textContent = `${text.length} characters`;
+}
 
 
 // ===================================
@@ -207,6 +242,10 @@ async function generateSpeech(text, apiKey, voiceId) {
     return await response.blob();
 }
 
+// ===================================
+// Download Summary Function
+// ===================================
+
 function handleDownload() {
     const summaryText = document.getElementById('summaryText').textContent;
     const summaryType = document.getElementById('summaryType').value;
@@ -242,6 +281,9 @@ function handleDownload() {
     }, 2000);
 }
 
+// ===================================
+// Generate Summary Function
+// ===================================
 
 async function generateSummary() {
     const type = document.getElementById('summaryType').value;
@@ -271,6 +313,8 @@ async function generateSummary() {
     // Show loading state
     showLoading();
 
+    closeAudio();
+
     try {
       // Call appropriate API to summarize
       const summary = await summarizeText(textInput, type, apiKey);
@@ -281,37 +325,70 @@ async function generateSummary() {
   });
 }
 
-
-function handleClear() {
-    document.getElementById('textInput').value = '';
-    document.getElementById('summaryResult').style.display = 'none';
-    document.getElementById('summaryError').style.display = 'none';
-    document.getElementById('summaryLoading').style.display = 'none';
+async function closeAudio() {
+    const ttsBtn = document.getElementById('ttsBtn');
+    ttsBtn.textContent = '🔊 Listen';
     document.getElementById('audioPlayer').style.display = 'none';
-    if (currentAudioUrl) {
-        URL.revokeObjectURL(currentAudioUrl);
-        currentAudioUrl = null;
-    }
-    updateCharCount();
+    const audio = document.getElementById('summaryAudio');
+    audio.pause();
 }
 
-function handleCopy() {
-    const summaryText = document.getElementById('summaryText').textContent;
-    navigator.clipboard.writeText(summaryText).then(() => {
-        const btn = document.getElementById('copySummary');
-        const originalText = btn.textContent;
-        btn.textContent = '✓ Copied!';
-        btn.style.background = '#4caf50';
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = '';
-        }, 2000);
+async function summarizeText(text, type, apiKey) {
+    const prompts = {
+        quick: 'Summarize this article in 2-3 clear, concise sentences. Focus on the main point and key takeaway. DO NOT use markdown formatting like ** or bold. Just plain text:\n\n',
+        bullets: 'Summarize this article as 3-5 KEY bullet points only. Focus on the most important takeaways. Keep each bullet point to ONE short sentence. Use simple hyphens (-) for bullets. DO NOT use sub-bullets or nested points. DO NOT use markdown. Be concise:\n\n'
+    };
+    
+    const prompt = prompts[type] + text.substring(0, 15000); // Limit text length
+    
+    let summary;
+    
+    summary = await summarizeWithGemini(prompt, apiKey);
+
+    
+    // Clean up markdown formatting
+    summary = cleanMarkdown(summary);
+    
+    return summary;
+}
+
+// Gemini API
+async function summarizeWithGemini(prompt, apiKey) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }]
+        })
     });
+    
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
 }
 
-function updateCharCount() {
-    const text = document.getElementById('textInput').value;
-    document.getElementById('charCount').textContent = `${text.length} characters`;
+// Remove markdown formatting
+function cleanMarkdown(text) {
+    // Remove bold/italic markers
+    text = text.replace(/\*\*/g, '');
+    text = text.replace(/\*/g, '');
+    text = text.replace(/__/g, '');
+    text = text.replace(/_/g, '');
+    
+    // Clean up bullet points - replace * with -
+    text = text.replace(/^\s*\*\s+/gm, '- ');
+    
+    return text.trim();
 }
 
 // ===================================
@@ -411,15 +488,11 @@ function handleSaveSettings() {
         elevenLabsApiKey: elevenLabsKey,
         voiceId: voiceId
     }, () => {
-        
-        const ttsBtn = document.getElementById('ttsBtn');
-        const originalText = ttsBtn.textContent;
-    
-        ttsBtn.textContent = '🔊 Listen';
 
+        closeAudio();
         closeSettingsModal();
+
         // Show success message
-        document.getElementById('audioPlayer').style.display = 'none';
         document.getElementById('summaryError').style.background = '#d4edda';
         document.getElementById('summaryError').style.borderColor = '#28a745';
         document.getElementById('summaryError').style.color = '#155724';
@@ -435,66 +508,3 @@ function handleSaveSettings() {
     
 }
 
-
-// ===================================
-// AI SUMMARIZATION
-// ===================================
-
-async function summarizeText(text, type, apiKey) {
-    const prompts = {
-        quick: 'Summarize this article in 2-3 clear, concise sentences. Focus on the main point and key takeaway. DO NOT use markdown formatting like ** or bold. Just plain text:\n\n',
-        bullets: 'Summarize this article as 3-5 KEY bullet points only. Focus on the most important takeaways. Keep each bullet point to ONE short sentence. Use simple hyphens (-) for bullets. DO NOT use sub-bullets or nested points. DO NOT use markdown. Be concise:\n\n'
-    };
-    
-    const prompt = prompts[type] + text.substring(0, 15000); // Limit text length
-    
-    let summary;
-    
-    summary = await summarizeWithGemini(prompt, apiKey);
-
-    
-    // Clean up markdown formatting
-    summary = cleanMarkdown(summary);
-    
-    return summary;
-}
-
-// Gemini API
-async function summarizeWithGemini(prompt, apiKey) {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{
-                    text: prompt
-                }]
-            }]
-        })
-    });
-    
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-}
-
-
-// Remove markdown formatting
-function cleanMarkdown(text) {
-    // Remove bold/italic markers
-    text = text.replace(/\*\*/g, '');
-    text = text.replace(/\*/g, '');
-    text = text.replace(/__/g, '');
-    text = text.replace(/_/g, '');
-    
-    // Clean up bullet points - replace * with -
-    text = text.replace(/^\s*\*\s+/gm, '- ');
-    
-    return text.trim();
-}

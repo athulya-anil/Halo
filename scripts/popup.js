@@ -6,6 +6,117 @@
 // Current view state
 let currentView = 'flash'; // 'flash' or 'summarizer'
 
+// ============================================
+// BACKGROUND AUDIO FUNCTIONALITY
+// ============================================
+
+let audioActive = false;
+let currentSoundType = 'meditation';
+
+// Map sound types to file paths
+const soundFiles = {
+  'meditation': 'sounds/Short Meditation Music - 3 Minute Relaxation, Calming.mp3'
+  // Add more sounds here as you download them:
+  // 'rain': 'sounds/rain.mp3',
+  // 'ocean': 'sounds/ocean.mp3',
+  // 'white': 'sounds/white-noise.mp3',
+};
+
+// Initialize audio toggle from storage
+chrome.storage.sync.get(['audioEnabled', 'soundType'], (data) => {
+  audioActive = data.audioEnabled === true; // Explicitly check for true, defaults to false
+  currentSoundType = data.soundType || 'meditation'; // Default to meditation
+
+  const toggle = document.getElementById('whiteNoiseToggle');
+  const soundSelect = document.getElementById('soundType');
+
+  if (toggle) {
+    toggle.checked = audioActive;
+  }
+  if (soundSelect) {
+    soundSelect.value = currentSoundType;
+  }
+
+  // If audio was ON before, make sure it's playing in background
+  if (audioActive) {
+    startAudio(currentSoundType);
+  }
+});
+
+// Audio toggle change handler
+document.getElementById('whiteNoiseToggle').addEventListener('change', (e) => {
+  audioActive = e.target.checked;
+
+  if (audioActive) {
+    currentSoundType = document.getElementById('soundType').value;
+    startAudio(currentSoundType);
+  } else {
+    stopAudio();
+  }
+
+  // Save state
+  chrome.storage.sync.set({ audioEnabled: audioActive });
+});
+
+// Sound type selector change handler
+document.getElementById('soundType').addEventListener('change', (e) => {
+  currentSoundType = e.target.value;
+  chrome.storage.sync.set({ soundType: currentSoundType });
+
+  // If audio is currently playing, restart with new sound type
+  if (audioActive) {
+    stopAudio();
+    setTimeout(() => startAudio(currentSoundType), 100);
+  }
+});
+
+function startAudio(soundType = 'meditation') {
+  try {
+    // Get the file path for this sound type
+    const audioFile = soundFiles[soundType];
+    if (!audioFile) {
+      console.error(`[Halo] No audio file found for sound type: ${soundType}`);
+      return;
+    }
+
+    // Send message to background worker to start audio
+    chrome.runtime.sendMessage({
+      action: 'startAudio',
+      soundFile: audioFile
+    }, (response) => {
+      if (response && response.success) {
+        console.log(`[Halo] Playing: ${soundType}`);
+      } else {
+        console.error('[Halo] Error playing audio:', response?.error);
+      }
+    });
+
+  } catch (error) {
+    console.error('[Halo] Error starting audio:', error);
+  }
+}
+
+function stopAudio() {
+  try {
+    // Send message to background worker to stop audio
+    chrome.runtime.sendMessage({
+      action: 'stopAudio'
+    }, (response) => {
+      if (response && response.success) {
+        console.log('[Halo] Audio stopped');
+      } else {
+        console.error('[Halo] Error stopping audio:', response?.error);
+      }
+    });
+  } catch (error) {
+    console.error('[Halo] Error stopping audio:', error);
+  }
+}
+
+// ============================================
+// VIEW TOGGLE FUNCTIONALITY
+// ============================================
+
 // View toggle functionality
 document.getElementById('viewToggle').addEventListener('click', () => {
   if (currentView === 'flash') {
@@ -21,9 +132,12 @@ function switchToFlash() {
   document.getElementById('summarizerView').classList.remove('active');
   document.getElementById('viewToggle').innerHTML = '<img src="icons/notepad.png" alt="Notepad" class="icon-img">';
   document.getElementById('viewToggle').title = 'Switch to Summarizer';
+  document.getElementById('viewToggleHint').textContent = 'Summarizer';
+  document.getElementById('viewToggleHint').style.display = 'inline';
   document.getElementById('headerSubtitle').textContent = 'Photosensitive Content Protection';
-  // Hide settings button in flash view
+  // Hide settings and music buttons in flash view
   document.getElementById('settingsBtn').style.display = 'none';
+  document.getElementById('musicBtn').style.display = 'none';
 }
 
 function switchToSummarizer() {
@@ -32,9 +146,11 @@ function switchToSummarizer() {
   document.getElementById('summarizerView').classList.add('active');
   document.getElementById('viewToggle').innerHTML = '<img src="icons/shield.png" alt="Shield" class="icon-img">';
   document.getElementById('viewToggle').title = 'Switch to Flash Protection';
+  document.getElementById('viewToggleHint').style.display = 'none';
   document.getElementById('headerSubtitle').textContent = 'AI-Powered Text Summarizer';
-  // Show settings button in summarizer view
+  // Show settings and music buttons in summarizer view
   document.getElementById('settingsBtn').style.display = 'flex';
+  document.getElementById('musicBtn').style.display = 'flex';
   // Clear everything when switching to summarizer view
   document.getElementById('textInput').value = '';
   document.getElementById('summaryResult').style.display = 'none';
@@ -45,6 +161,29 @@ function switchToSummarizer() {
 // Settings button - opens modal
 document.getElementById('settingsBtn').addEventListener('click', () => {
   openSettingsModal();
+});
+
+// Music button - toggles audio section visibility
+document.getElementById('musicBtn').addEventListener('click', () => {
+  const audioSection = document.getElementById('audioSection');
+  if (audioSection) {
+    // Toggle visibility
+    if (audioSection.style.display === 'none' || audioSection.style.display === '') {
+      audioSection.style.display = 'block';
+      // Scroll to it
+      setTimeout(() => {
+        audioSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add a brief highlight effect
+        audioSection.style.transition = 'background-color 0.3s ease';
+        audioSection.style.backgroundColor = 'rgba(184, 245, 10, 0.15)';
+        setTimeout(() => {
+          audioSection.style.backgroundColor = '';
+        }, 1200);
+      }, 100);
+    } else {
+      audioSection.style.display = 'none';
+    }
+  }
 });
 
 // Load settings from storage
