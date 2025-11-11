@@ -91,7 +91,7 @@ function startAudio(soundType = 'meditation') {
       soundFile: audioFile
     }, (response) => {
       if (response && response.success) {
-        console.log(`[Halo] Playing: ${soundType}`);
+  // Debug: playing sound (omitted)
       } else {
         console.error('[Halo] Error playing audio:', response?.error);
       }
@@ -109,7 +109,7 @@ function stopAudio() {
       action: 'stopAudio'
     }, (response) => {
       if (response && response.success) {
-        console.log('[Halo] Audio stopped');
+  // Debug: audio stopped (omitted)
       } else {
         console.error('[Halo] Error stopping audio:', response?.error);
       }
@@ -279,7 +279,6 @@ function updateStatusDisplay(enabled) {
 function updateStatsDisplay() {
   chrome.storage.local.get(['stats'], (data) => {
     if (data.stats) {
-      console.log('[Halo Popup] Updating stats display:', data.stats);
       document.getElementById('videosMonitored').textContent = data.stats.videosMonitored || 0;
       document.getElementById('warningsIssued').textContent = data.stats.warningsIssued || 0;
       document.getElementById('flashesDetected').textContent = data.stats.flashesDetected || 0;
@@ -293,7 +292,6 @@ setInterval(updateStatsDisplay, 500); // Update twice per second for better resp
 // Also listen for storage changes for immediate updates
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (changes.stats) {
-    console.log('[Halo Popup] Storage changed:', changes.stats.newValue);
     updateStatsDisplay();
   }
 });
@@ -340,7 +338,7 @@ document.getElementById('resetStats').addEventListener('click', () => {
         button.style.color = '#ffffff';
       }, 1500);
 
-      console.log('[Halo] Statistics reset successfully');
+  // Statistics reset successfully (debug omitted)
     });
   });
 });
@@ -396,7 +394,7 @@ document.getElementById('autoGenerateBtn').addEventListener('click', async () =>
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (injectionError) {
       // Script might already be injected, continue
-      console.log('[Halo] Content script may already be injected:', injectionError);
+  // Content script may already be injected (debug omitted)
     }
 
     // Send message to content script to extract text
@@ -520,7 +518,7 @@ function closeSettingsModal() {
 // Save settings
 document.getElementById('saveSettings').addEventListener('click', () => {
   const provider = document.getElementById('aiProvider').value;
-  console.log('[Halo] Saving settings for provider:', provider);
+  // Saving settings for provider (debug omitted)
   const geminiKey = document.getElementById('apiKeyInput').value.trim();
   const elevenLabsKey = document.getElementById('elevenLabsApiKeyInput').value.trim();
   const voiceId = document.getElementById('voiceSelect').value;
@@ -547,7 +545,7 @@ document.getElementById('saveSettings').addEventListener('click', () => {
     closeSettingsModal();
     // Show success message
     if (currentView === 'summarizer') {
-      console.log('[Halo] Settings saved successfully: ', aiProvider);
+  // Settings saved successfully (debug omitted)
       document.getElementById('summaryError').style.background = '#d4edda';
       document.getElementById('summaryError').style.borderColor = '#28a745';
       document.getElementById('summaryError').style.color = '#155724';
