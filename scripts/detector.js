@@ -23,11 +23,11 @@ class FlashDetector {
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 
     // Detection parameters (WCAG 2.1 compliant)
-    this.LUMINANCE_THRESHOLD = 0.2; // 10% relative luminance change
+    this.LUMINANCE_THRESHOLD = 0.4; // 40% relative luminance change (stricter to reduce false positives)
     this.RED_THRESHOLD = 0.6; // Saturated red detection
     this.FLASH_FREQUENCY = 3; // 3 flashes per second
     this.DETECTION_WINDOW = 1000; // 1 second in milliseconds
-    this.MIN_BRIGHTNESS = 0.05; // Ignore very dark frames (< 5% brightness)
+    this.MIN_BRIGHTNESS = 0.10; // Ignore very dark frames (< 10% brightness) to filter fades & logos
     this.WARMUP_FRAMES = 10; // Skip first 10 frames to avoid false positives during video initialization
 
     // State tracking
@@ -162,7 +162,7 @@ class FlashDetector {
 
           // Additional check: both current and previous luminance must be significant for a valid flash
           const bothFramesBright = currentLuminance > this.MIN_BRIGHTNESS && this.prevLuminance > this.MIN_BRIGHTNESS;
-          const absoluteChangeSignificant = luminanceChange > 0.1; // At least 10% absolute change
+          const absoluteChangeSignificant = luminanceChange > 0.2; // At least 20% absolute change (increased from 10%)
 
           if (relativeLuminanceChange > this.LUMINANCE_THRESHOLD && bothFramesBright && absoluteChangeSignificant) {
             this.flashTimestamps.push(currentTime);
